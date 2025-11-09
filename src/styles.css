@@ -71,3 +71,9 @@ code {
   font-family:
     source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
+
+.modal {
+  position: fixed !important;
+  align-items: flex-start !important;
+  padding-top: 10vh;
+}
