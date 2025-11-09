@@ -9,11 +9,16 @@ export const Route = createFileRoute("/")({
   component: App,
 });
 
+type CaloriesConfigRow = {
+  id: string | number;
+  total_calories: number;
+};
+
 type MealRow = {
   id: string;
   meal_name: string;
   meal_calories: number;
-  time?: Date; // optional timestamptz or time
+  time?: Date;
 };
 
 type Meal = {
@@ -24,6 +29,7 @@ type Meal = {
 };
 
 type Data = {
+  configId: string | number | null;
   totalCalories: number;
   meals: Meal[];
 };
@@ -32,28 +38,24 @@ async function fetchCaloriesForDay(day: Date): Promise<Data> {
   const from = startOfDay(day).toISOString();
   const to = endOfDay(day).toISOString();
 
-  const caloriesQuery = supabase
+  // get first row from calories_config
+  const { data: config, error: configError } = await supabase
     .from("calories_config")
-    .select("total_calories")
+    .select("id,total_calories")
+    .order("id", { ascending: true })
     .limit(1)
     .maybeSingle();
 
-  const mealsQuery = supabase
+  if (configError) throw configError;
+
+  const { data: meals, error: mealsError } = await supabase
     .from("meals")
     .select("*")
     .gte("time", from)
     .lt("time", to)
     .order("time", { ascending: false });
 
-  const [
-    { data: config, error: configError },
-    { data: meals, error: mealsError },
-  ] = await Promise.all([caloriesQuery, mealsQuery]);
-
-  if (configError) throw configError;
   if (mealsError) throw mealsError;
-
-  const totalCalories = config?.total_calories ?? 0;
 
   const mapped: Meal[] =
     (meals as MealRow[] | null)?.map((m) => ({
@@ -63,7 +65,11 @@ async function fetchCaloriesForDay(day: Date): Promise<Data> {
       time: m.time ? new Date(m.time) : null,
     })) ?? [];
 
-  return { totalCalories, meals: mapped };
+  return {
+    configId: (config as CaloriesConfigRow | null)?.id ?? null,
+    totalCalories: (config as CaloriesConfigRow | null)?.total_calories ?? 0,
+    meals: mapped,
+  };
 }
 
 type AddMealVars = {
@@ -82,6 +88,11 @@ type DeleteMealVars = {
   id: string;
 };
 
+type UpdateCaloriesVars = {
+  id: string | number;
+  total_calories: number;
+};
+
 function App() {
   const [date, setDate] = useState<Date>(new Date());
   const [isOpen, setIsOpen] = useState(false);
@@ -89,13 +100,17 @@ function App() {
   // Add dialog
   const addDialogRef = useRef<HTMLDialogElement>(null);
 
-  // Edit dialog state
+  // Edit meal dialog state
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [editName, setEditName] = useState("");
   const [editCalories, setEditCalories] = useState<number | string>("");
 
   // Delete dialog state
   const [deletingMeal, setDeletingMeal] = useState<Meal | null>(null);
+
+  // Edit daily goal dialog state
+  const [editGoalOpen, setEditGoalOpen] = useState(false);
+  const [editGoalValue, setEditGoalValue] = useState<string>("");
 
   const queryClient = useQueryClient();
 
@@ -105,13 +120,12 @@ function App() {
     queryFn: () => fetchCaloriesForDay(date),
   });
 
-  // Compute consumed from meals; fall back to 0 if none
   const consumed = (data?.meals ?? []).reduce(
     (sum, m) => sum + (m.calories || 0),
     0
   );
   const calories = data?.totalCalories ?? 0;
-  const remaining = Math.max(0, calories - consumed);
+  const remaining = calories - consumed;
   const leftPct = calories > 0 ? Math.min(100, (consumed / calories) * 100) : 0;
 
   const formatted = format(date, "EEEE, MMMM do yyyy");
@@ -125,6 +139,7 @@ function App() {
   const openAddModal = () => addDialogRef.current?.showModal();
   const closeAddModal = () => addDialogRef.current?.close();
 
+  // -------- ADD --------
   const addMeal = useMutation({
     mutationFn: async (values: AddMealVars) => {
       const { data, error } = await supabase
@@ -166,7 +181,7 @@ function App() {
     form.reset();
   };
 
-  // -------- EDIT --------
+  // -------- EDIT MEAL --------
   const updateMeal = useMutation({
     mutationFn: async (values: UpdateMealVars) => {
       const { data, error } = await supabase
@@ -189,15 +204,15 @@ function App() {
     },
   });
 
-  const openEdit = (meal: Meal) => {
+  const openEditMeal = (meal: Meal) => {
     setEditingMeal(meal);
     setEditName(meal.name);
     setEditCalories(meal.calories);
   };
 
-  const closeEdit = () => setEditingMeal(null);
+  const closeEditMeal = () => setEditingMeal(null);
 
-  const handleEditSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+  const handleEditMealSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingMeal) return;
 
@@ -213,7 +228,7 @@ function App() {
     });
   };
 
-  // -------- DELETE --------
+  // -------- DELETE MEAL --------
   const deleteMeal = useMutation({
     mutationFn: async ({ id }: DeleteMealVars) => {
       const { error } = await supabase.from("meals").delete().eq("id", id);
@@ -230,6 +245,44 @@ function App() {
 
   const openDelete = (meal: Meal) => setDeletingMeal(meal);
   const closeDelete = () => setDeletingMeal(null);
+
+  // -------- UPDATE DAILY GOAL (first row) --------
+  const updateCaloriesConfig = useMutation({
+    mutationFn: async ({ id, total_calories }: UpdateCaloriesVars) => {
+      const { data, error } = await supabase
+        .from("calories_config")
+        .update({ total_calories })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as CaloriesConfigRow;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["meals-and-config", date.toDateString()],
+      });
+      setEditGoalOpen(false);
+    },
+  });
+
+  const openEditGoal = () => {
+    // if there is no config row, we still allow typing a value
+    setEditGoalValue(calories ? String(calories) : "");
+    setEditGoalOpen(true);
+  };
+
+  const handleEditGoalSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!data?.configId) return; // only updating existing first row as requested
+    const val = Number(editGoalValue);
+    if (Number.isNaN(val) || val <= 0) return;
+
+    updateCaloriesConfig.mutate({
+      id: data.configId,
+      total_calories: val,
+    });
+  };
 
   return (
     <div className="relative my-4 flex flex-col items-center">
@@ -262,29 +315,38 @@ function App() {
 
       {/* Summary header */}
       <div className="sticky top-4 z-10 flex w-full flex-col items-center space-y-6 bg-base-100 pb-4">
-        {!!calories && (
-          <div
-            className="radial-progress"
-            style={
-              {
-                "--value": leftPct,
-                "--size": "12rem",
-                "--thickness": "10px",
-              } as React.CSSProperties
-            }
-            aria-valuenow={leftPct}
-            role="progressbar"
-          >
-            <div className="flex flex-col items-center">
-              <span className="text-xs opacity-70">REMAINING</span>
-              <span className="text-2xl font-bold">{remaining}</span>
-            </div>
+        <div
+          className="radial-progress"
+          style={
+            {
+              "--value": leftPct,
+              "--size": "12rem",
+              "--thickness": "10px",
+            } as React.CSSProperties
+          }
+          aria-valuenow={leftPct}
+          role="progressbar"
+        >
+          <div className="flex flex-col items-center">
+            <span className="text-xs opacity-70">REMAINING</span>
+            <span
+              className={`text-2xl font-bold ${remaining < 0 && "text-red-600"} ${leftPct > 75 && "text-orange-500"}`}
+            >
+              {remaining}
+            </span>
           </div>
-        )}
+        </div>
+
         <div className="flex items-center text-center">
-          <div className="flex flex-col">
+          <div
+            className="flex cursor-pointer flex-col"
+            onClick={openEditGoal}
+            title="Edit daily goal"
+          >
             <span className="text-sm opacity-70">DAILY GOAL</span>
-            <span className="text-xl font-bold">{calories}</span>
+            <span className="text-xl font-bold underline decoration-dotted underline-offset-4">
+              {calories}
+            </span>
           </div>
           <div className="divider divider-horizontal" />
           <div className="flex flex-col">
@@ -344,7 +406,7 @@ function App() {
         </div>
       )}
 
-      <ul className="list w-84 mb-4 rounded-box bg-base-100 shadow-md">
+      <ul className="list w-84 rounded-box bg-base-100 shadow-md">
         {(data?.meals ?? []).map((meal) => (
           <li key={meal.id} className="list-row flex w-full flex-col p-3">
             <div className="flex w-full items-start justify-between">
@@ -360,7 +422,7 @@ function App() {
               <div className="flex gap-1">
                 <button
                   className="btn btn-square btn-ghost"
-                  onClick={() => openEdit(meal)}
+                  onClick={() => openEditMeal(meal)}
                   aria-label={`Edit ${meal.name}`}
                 >
                   {/* Edit icon */}
@@ -412,18 +474,18 @@ function App() {
       </ul>
 
       {/* Add button */}
-      <div className="sticky bottom-0 z-10 bg-base-100 py-4">
+      <div className="sticky bottom-0 z-10 mt-4 bg-base-100 py-4">
         <button className="btn w-84" onClick={openAddModal}>
           Add Meal
         </button>
       </div>
 
-      {/* EDIT Dialog */}
+      {/* EDIT Meal Dialog */}
       {editingMeal && (
         <dialog className="modal" open>
           <div className="modal-box">
             <h3 className="text-2xl font-bold">Edit meal</h3>
-            <form onSubmit={handleEditSubmit}>
+            <form onSubmit={handleEditMealSubmit}>
               <div className="modal-action flex flex-col gap-3">
                 <input
                   required
@@ -446,7 +508,7 @@ function App() {
                   <button
                     type="button"
                     className="btn btn-ghost"
-                    onClick={closeEdit}
+                    onClick={closeEditMeal}
                   >
                     Cancel
                   </button>
@@ -492,6 +554,49 @@ function App() {
                 {deleteMeal.isPending ? "Deleting..." : "Delete"}
               </button>
             </div>
+          </div>
+        </dialog>
+      )}
+
+      {/* EDIT DAILY GOAL Dialog */}
+      {editGoalOpen && (
+        <dialog className="modal" open>
+          <div className="modal-box">
+            <h3 className="text-2xl font-bold">Edit daily goal</h3>
+            {!data?.configId ? (
+              <p className="mt-2 text-warning">
+                No row found in <code>calories_config</code>. Create one first
+                to enable editing.
+              </p>
+            ) : null}
+            <form onSubmit={handleEditGoalSubmit}>
+              <div className="modal-action flex flex-col gap-3">
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  placeholder="Total calories"
+                  className="input w-full"
+                  value={editGoalValue}
+                  onChange={(e) => setEditGoalValue(e.target.value)}
+                />
+                <div className="mt-2 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => setEditGoalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    disabled={updateCaloriesConfig.isPending || !data?.configId}
+                  >
+                    {updateCaloriesConfig.isPending ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </dialog>
       )}
