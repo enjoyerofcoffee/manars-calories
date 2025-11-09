@@ -330,11 +330,15 @@ function App() {
         >
           <div className="flex flex-col items-center visible">
             <span className="text-xs opacity-70">REMAINING</span>
-            <span
-              className={`text-2xl font-bold ${remaining < 0 && "text-red-600"} ${leftPct > 75 && "text-orange-500"}`}
-            >
-              {remaining}
-            </span>
+            {isLoading ? (
+              <span className="mt-2 loading loading-spinner "></span>
+            ) : (
+              <span
+                className={`text-2xl font-bold ${remaining < 0 && "text-red-600"} ${leftPct > 75 && "text-orange-500"}`}
+              >
+                {remaining}
+              </span>
+            )}
           </div>
         </div>
 
@@ -345,14 +349,24 @@ function App() {
             title="Edit daily goal"
           >
             <span className="text-sm opacity-70">DAILY GOAL</span>
-            <span className="text-xl font-bold underline decoration-dotted underline-offset-4">
-              {calories}
-            </span>
+            {isLoading ? (
+              <span className="loading loading-spinner self-center mt-2"></span>
+            ) : (
+              <span className="text-xl font-bold underline decoration-dotted underline-offset-4">
+                {calories}
+              </span>
+            )}
           </div>
           <div className="divider divider-horizontal" />
           <div className="flex flex-col">
             <span className="text-sm opacity-70">CONSUMED</span>
-            <span className="text-xl font-bold">{consumed}</span>
+            {isLoading ? (
+              <span className="loading loading-spinner self-center mt-2"></span>
+            ) : (
+              <>
+                <span className="text-xl font-bold">{consumed}</span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -400,7 +414,9 @@ function App() {
       </dialog>
 
       {/* Meals list */}
-      {isLoading && <div className="mt-6 opacity-70">Loading…</div>}
+      {isLoading && (
+        <span className="loading loading-ring loading-xl mt-2"></span>
+      )}
       {isError && (
         <div className="mt-6 text-error">
           {(error as Error)?.message ?? "Failed to load data"}
