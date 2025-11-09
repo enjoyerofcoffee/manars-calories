@@ -1,15 +1,73 @@
 @import "tailwindcss";
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+  name: "purpledream";
+  default: true; /* set as default */
+  prefersdark: false;
+  color-scheme: light;
+
+  /* Base tones — soft visible lavender background */
+  --color-base-100: oklch(
+    96% 0.05 285
+  ); /* light lavender with clear purple tone */
+  --color-base-200: oklch(93% 0.06 285);
+  --color-base-300: oklch(89% 0.07 285);
+  --color-base-content: oklch(38% 0.2 280); /* readable purple text */
+
+  /* Primary — deep royal violet */
+  --color-primary: oklch(55% 0.25 280);
+  --color-primary-content: oklch(98% 0.01 280);
+
+  /* Secondary — soft pastel lavender */
+  --color-secondary: oklch(70% 0.18 295);
+  --color-secondary-content: oklch(25% 0.04 295);
+
+  /* Accent — bright lilac for highlights */
+  --color-accent: oklch(77% 0.22 300);
+  --color-accent-content: oklch(25% 0.03 300);
+
+  /* Neutral — muted purple-gray */
+  --color-neutral: oklch(37% 0.06 275);
+  --color-neutral-content: oklch(96% 0.01 275);
+
+  /* Status colors (kept consistent) */
+  --color-info: oklch(70% 0.16 260);
+  --color-info-content: oklch(98% 0.01 260);
+  --color-success: oklch(65% 0.22 150);
+  --color-success-content: oklch(98% 0.01 150);
+  --color-warning: oklch(78% 0.23 85);
+  --color-warning-content: oklch(25% 0.05 85);
+  --color-error: oklch(58% 0.28 25);
+  --color-error-content: oklch(98% 0.01 25);
+
+  /* Border radius */
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+
+  /* Base sizes */
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+
+  /* Border size */
+  --border: 1px;
+
+  /* Effects */
+  --depth: 1;
+  --noise: 0;
+}
 
 body {
   @apply m-0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100vh;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
