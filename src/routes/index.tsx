@@ -319,6 +319,7 @@ function App() {
           className="radial-progress"
           style={
             {
+              visibility: leftPct === 0 ? "hidden" : "visible",
               "--value": leftPct,
               "--size": "12rem",
               "--thickness": "10px",
@@ -327,7 +328,7 @@ function App() {
           aria-valuenow={leftPct}
           role="progressbar"
         >
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center visible">
             <span className="text-xs opacity-70">REMAINING</span>
             <span
               className={`text-2xl font-bold ${remaining < 0 && "text-red-600"} ${leftPct > 75 && "text-orange-500"}`}
