@@ -12,6 +12,7 @@ import {
   Legend,
   Line,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { Meals } from "./Meals";
@@ -100,8 +101,12 @@ export function transformData(
     .sort((a, b) => a.dayStart - b.dayStart);
 }
 
+type GraphsProps = {
+  baseline?: number;
+};
+
 /** ===== Component ===== */
-export const Graphs: React.FC = () => {
+export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
   // Default: last 7 days inclusive (today + previous 6)
   const today = atLocalMidnight(new Date());
   const sevenDaysAgo = new Date(today);
@@ -204,6 +209,17 @@ export const Graphs: React.FC = () => {
                   name === "calories" ? [value, "Calories"] : [value, name]
                 }
                 contentStyle={{ borderRadius: 8 }}
+              />
+              <ReferenceLine
+                y={baseline} // the Y-value to draw the line
+                stroke="red" // line color
+                strokeDasharray="4 4" // dashed style
+                label={{
+                  value: `Daily calories (${baseline} kcl)`,
+                  position: "top",
+                  fill: "red",
+                  fontSize: 12,
+                }}
               />
               {/* <Legend /> */}
               <Line

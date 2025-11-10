@@ -631,7 +631,7 @@ function App() {
       )}
       {activeTab === "tab2" && (
         <>
-          <Graphs />
+          <Graphs baseline={calories} />
         </>
       )}
     </div>
