@@ -215,7 +215,6 @@ export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
                 stroke="red" // line color
                 strokeDasharray="4 4" // dashed style
                 label={{
-                  value: `Daily calories (${baseline} kcl)`,
                   position: "top",
                   fill: "red",
                   fontSize: 12,
