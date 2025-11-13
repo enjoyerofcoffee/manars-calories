@@ -11,3 +11,15 @@ export type Meal = {
   calories: number;
   time?: Date | null;
 };
+
+export type Notes = {
+  id: string;
+  text: string;
+  time: Date | null;
+};
+
+export type NotesRow = {
+  id: string;
+  text: string;
+  time: Date | null;
+};

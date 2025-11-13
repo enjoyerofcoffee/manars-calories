@@ -1,5 +1,5 @@
 import { supabase } from "@/db";
-import type { Meal, MealRow } from "@/types";
+import type { Meal, MealRow, Notes, NotesRow } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { addDays, endOfDay, format, startOfDay } from "date-fns";
 import { useMemo, useState } from "react";
@@ -7,7 +7,6 @@ import {
   LineChart,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   Legend,
   Line,
@@ -17,8 +16,15 @@ import {
 import { DayPicker, type DateRange } from "react-day-picker";
 import { Meals } from "./Meals";
 
+const BMRCalories = 1500;
+
 /** ===== Types ===== */
 type ChartPoint = { dayStart: number; calories: number | null };
+
+type Data = {
+  meals: Meal[];
+  notes: Notes[];
+};
 
 /** ===== Utils ===== */
 const atLocalMidnight = (d: Date) =>
@@ -27,32 +33,57 @@ const atLocalMidnight = (d: Date) =>
 /** ===== Data fetch ===== */
 const fetchMeals = async (range?: DateRange) => {
   if (!range?.to || !range?.from) {
-    return [];
+    throw new Error("Wrong time range");
   }
 
   const from = startOfDay(range.from).toISOString();
   const to = endOfDay(range.to).toISOString();
 
-  const { data, error } = await supabase
+  const mealsQuery = supabase
     .from("meals")
     .select("*")
     .gte("time", from)
-    .lte("time", to); // inclusive end-of-day
+    .lte("time", to);
 
-  if (error) {
-    console.error(error);
-    return [];
+  const notesQuery = supabase
+    .from("notes")
+    .select("*")
+    .gte("time", from)
+    .lte("time", to);
+
+  const { data: mealsData, error: mealsError } = await mealsQuery;
+
+  const { data: notesData } = await notesQuery;
+
+  if (mealsError) {
+    console.error(mealsError);
+    throw mealsError;
   }
 
+  console.log(notesData);
+
   const mapped: Meal[] =
-    (data as MealRow[] | null)?.map((m) => ({
+    (mealsData as MealRow[] | null)?.map((m) => ({
       id: m.id,
       name: m.meal_name,
       calories: Number(m.meal_calories) || 0,
       time: m.time ? new Date(m.time) : null,
+      text: notesData?.[0].text,
     })) ?? [];
 
-  return mapped;
+  const mappedNotes: Notes[] =
+    (notesData as NotesRow[] | null)?.map((n) => ({
+      id: n.id,
+      text: n.text,
+      time: n.time ? new Date(n.time) : null,
+    })) ?? [];
+
+  const response: Data = {
+    meals: mapped,
+    notes: mappedNotes,
+  };
+
+  return response;
 };
 
 /** ===== Transform with buffer & fill =====
@@ -118,7 +149,7 @@ export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
   });
   const [showCalendar, setShowCalendar] = useState(false);
 
-  const { data: meals, isLoading } = useQuery<Meal[]>({
+  const { data: dataResponse, isLoading } = useQuery<Data>({
     queryKey: [
       "meals-and-config",
       range?.from?.toDateString(),
@@ -127,12 +158,17 @@ export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
     queryFn: () => fetchMeals(range),
   });
 
-  const data = useMemo(() => transformData(meals, range, 1), [meals, range]);
+  const data = useMemo(
+    () => transformData(dataResponse?.meals, range, 1),
+    [dataResponse?.meals, range]
+  );
 
   const onSelect = (r?: DateRange) => {
     setRange(r);
     setShowCalendar(false);
   };
+
+  const hasAboveBMR = data.find((point) => (point.calories || 0) > BMRCalories);
 
   return (
     <>
@@ -169,7 +205,7 @@ export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
 
       {isLoading && <span className="loading loading-ring loading-xl"></span>}
 
-      {meals?.length !== 0 && !isLoading && (
+      {dataResponse && !isLoading && (
         <div
           style={{
             width: "90%",
@@ -226,7 +262,9 @@ export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
                     <div className="text-xs text-red-400">
                       Base calories - - -{" "}
                     </div>
-                    <div className="text-xs text-blue-600">BMR - - - </div>
+                    {hasAboveBMR && (
+                      <div className="text-xs text-blue-600">BMR - - - </div>
+                    )}
                   </div>
                 )}
               />
@@ -248,7 +286,7 @@ export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
           No meals in this range 😢 please pick a different time peroid
         </div>
       )}
-      <Meals data={meals || []} />
+      <Meals meals={dataResponse?.meals} notes={dataResponse?.notes} />
     </>
   );
 };

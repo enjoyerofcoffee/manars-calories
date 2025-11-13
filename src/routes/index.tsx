@@ -5,7 +5,7 @@ import { format, startOfDay, endOfDay } from "date-fns";
 import { supabase } from "@/db";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Graphs } from "@/components/Graphs";
-import type { Meal, MealRow } from "@/types";
+import type { Meal, MealRow, Notes } from "@/types";
 
 export const Route = createFileRoute("/")({
   component: App,
@@ -20,6 +20,7 @@ type Data = {
   configId: string | number | null;
   totalCalories: number;
   meals: Meal[];
+  notes: Notes;
 };
 
 async function fetchCaloriesForDay(day: Date): Promise<Data> {
@@ -27,26 +28,43 @@ async function fetchCaloriesForDay(day: Date): Promise<Data> {
   const to = endOfDay(day).toISOString();
 
   // get first row from calories_config
-  const { data: config, error: configError } = await supabase
+  const caloriesQuery = supabase
     .from("calories_config")
     .select("id,total_calories")
     .order("id", { ascending: true })
     .limit(1)
     .maybeSingle();
 
-  if (configError) throw configError;
-
-  const { data: meals, error: mealsError } = await supabase
+  const mealsQuery = supabase
     .from("meals")
     .select("*")
     .gte("time", from)
     .lt("time", to)
     .order("time", { ascending: false });
 
+  const notesQuery = supabase
+    .from("notes")
+    .select("*")
+    .gte("time", from)
+    .lt("time", to);
+
+  const [calories, meals, notes] = await Promise.all([
+    caloriesQuery,
+    mealsQuery,
+    notesQuery,
+  ]);
+
+  const { data: config, error: configError } = calories;
+  if (configError) throw configError;
+
+  const { data: mealsData, error: mealsError } = meals;
   if (mealsError) throw mealsError;
 
+  const { data: notesData, error: notesError } = notes;
+  if (notesError) throw notesError;
+
   const mapped: Meal[] =
-    (meals as MealRow[] | null)?.map((m) => ({
+    (mealsData as MealRow[] | null)?.map((m) => ({
       id: m.id,
       name: m.meal_name,
       calories: Number(m.meal_calories) || 0,
@@ -57,6 +75,7 @@ async function fetchCaloriesForDay(day: Date): Promise<Data> {
     configId: (config as CaloriesConfigRow | null)?.id ?? null,
     totalCalories: (config as CaloriesConfigRow | null)?.total_calories ?? 0,
     meals: mapped,
+    notes: notesData?.[0] as Notes,
   };
 }
 
@@ -431,73 +450,86 @@ function App() {
             </div>
           )}
 
-          <ul className="list w-84 rounded-box bg-base-100 shadow-md">
-            {(data?.meals ?? []).map((meal) => (
-              <li key={meal.id} className="list-row flex w-full flex-col p-3">
-                <div className="flex w-full items-start justify-between">
-                  <div className="text-lg">{meal.name}</div>
-                  <span className="min-w-[4.5rem] text-end">
-                    {meal.time ? format(meal.time, "HH:mm a") : "--:--"}
-                  </span>
-                </div>
-                <div className="mt-1 flex items-end justify-between">
-                  <div className="text-end text-xs uppercase font-semibold opacity-60">
-                    {meal.calories} calories
+          <div className="w-84 space-y-4">
+            <ul className="list rounded-box bg-base-100 shadow-md">
+              {(data?.meals ?? []).map((meal) => (
+                <li key={meal.id} className="list-row flex w-full flex-col p-3">
+                  <div className="flex w-full items-start justify-between">
+                    <div className="text-lg">{meal.name}</div>
+                    <span className="min-w-[4.5rem] text-end">
+                      {meal.time ? format(meal.time, "HH:mm a") : "--:--"}
+                    </span>
                   </div>
-                  <div className="flex gap-1">
-                    <button
-                      className="btn btn-square btn-ghost"
-                      onClick={() => openEditMeal(meal)}
-                      aria-label={`Edit ${meal.name}`}
-                    >
-                      {/* Edit icon */}
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                        role="img"
+                  <div className="mt-1 flex items-end justify-between">
+                    <div className="text-end text-xs uppercase font-semibold opacity-60">
+                      {meal.calories} calories
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        className="btn btn-square btn-ghost"
+                        onClick={() => openEditMeal(meal)}
+                        aria-label={`Edit ${meal.name}`}
                       >
-                        <path d="M4 20h4l9.4-9.4a1.5 1.5 0 0 0 0-2.1l-2.9-2.9a1.5 1.5 0 0 0-2.1 0L5 15v5z" />
-                        <path d="M13.5 6.5l4 4" />
-                      </svg>
-                    </button>
-                    <button
-                      className="btn btn-square btn-ghost"
-                      onClick={() => openDelete(meal)}
-                      aria-label={`Delete ${meal.name}`}
-                    >
-                      {/* Delete icon */}
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                        role="img"
+                        {/* Edit icon */}
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          role="img"
+                        >
+                          <path d="M4 20h4l9.4-9.4a1.5 1.5 0 0 0 0-2.1l-2.9-2.9a1.5 1.5 0 0 0-2.1 0L5 15v5z" />
+                          <path d="M13.5 6.5l4 4" />
+                        </svg>
+                      </button>
+                      <button
+                        className="btn btn-square btn-ghost"
+                        onClick={() => openDelete(meal)}
+                        aria-label={`Delete ${meal.name}`}
                       >
-                        <path d="M4 7h16" />
-                        <path d="M9 7v-1.5c0-.8.7-1.5 1.5-1.5h3c.8 0 1.5.7 1.5 1.5V7" />
-                        <path d="M6.5 7l.9 11.2c.1 1.1 1 1.8 2.1 1.8h4.9c1.1 0 2-.8 2.1-1.8L18.5 7" />
-                        <path d="M10 11l.3 6" />
-                        <path d="M14 11l-.3 6" />
-                      </svg>
-                    </button>
+                        {/* Delete icon */}
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          role="img"
+                        >
+                          <path d="M4 7h16" />
+                          <path d="M9 7v-1.5c0-.8.7-1.5 1.5-1.5h3c.8 0 1.5.7 1.5 1.5V7" />
+                          <path d="M6.5 7l.9 11.2c.1 1.1 1 1.8 2.1 1.8h4.9c1.1 0 2-.8 2.1-1.8L18.5 7" />
+                          <path d="M10 11l.3 6" />
+                          <path d="M14 11l-.3 6" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
 
+            <div className="collapse collapse-arrow rounded-box bg-base-100 shadow-md ">
+              <input type="checkbox" />
+              <div className="collapse-title font-semibold">Notes</div>
+              <div className="collapse-content text-sm">
+                <textarea
+                  placeholder="Write your notes here"
+                  defaultValue={data?.notes?.text}
+                  className="textarea h-40"
+                />
+              </div>
+            </div>
+          </div>
           {/* Add button */}
           <div className="sticky bottom-0 z-10 mt-4 bg-base-100 py-4">
             <button className="btn w-84" onClick={openAddModal}>
