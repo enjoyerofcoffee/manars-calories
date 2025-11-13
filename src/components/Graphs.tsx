@@ -18,7 +18,7 @@ import { DayPicker, type DateRange } from "react-day-picker";
 import { Meals } from "./Meals";
 
 /** ===== Types ===== */
-type ChartPoint = { dayStart: number; calories: number };
+type ChartPoint = { dayStart: number; calories: number | null };
 
 /** ===== Utils ===== */
 const atLocalMidnight = (d: Date) =>
@@ -90,7 +90,7 @@ export function transformData(
       d = addDays(d, 1)
     ) {
       const ms = d.getTime();
-      out.push({ dayStart: ms, calories: totals.get(ms) ?? 0 });
+      out.push({ dayStart: ms, calories: totals.get(ms) ?? null });
     }
     return out;
   }
@@ -127,7 +127,7 @@ export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
     queryFn: () => fetchMeals(range),
   });
 
-  const data = useMemo(() => transformData(meals, range, 7), [meals, range]);
+  const data = useMemo(() => transformData(meals, range, 1), [meals, range]);
 
   const onSelect = (r?: DateRange) => {
     setRange(r);
@@ -214,13 +214,22 @@ export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
                 y={baseline} // the Y-value to draw the line
                 stroke="red" // line color
                 strokeDasharray="4 4" // dashed style
-                label={{
-                  position: "top",
-                  fill: "red",
-                  fontSize: 12,
-                }}
               />
-              {/* <Legend /> */}
+              <ReferenceLine
+                y={1500} // the Y-value to draw the line
+                stroke="blue" // line color
+                strokeDasharray="4 4" // dashed style
+              />
+              <Legend
+                content={() => (
+                  <div className="flex space-x-4 ml-16 mt-2">
+                    <div className="text-xs text-red-400">
+                      Base calories - - -{" "}
+                    </div>
+                    <div className="text-xs text-blue-600">BMR - - - </div>
+                  </div>
+                )}
+              />
               <Line
                 type="monotone"
                 dataKey="calories"
