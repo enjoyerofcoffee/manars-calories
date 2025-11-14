@@ -125,6 +125,7 @@ function App() {
   const [savingNotes, setSavingNotes] = useState<"" | "saving" | "saved">("");
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -612,6 +613,12 @@ function App() {
               <div className="collapse-title font-semibold">Notes</div>
               <div className="collapse-content text-sm">
                 <textarea
+                  onClick={() => {
+                    bottomRef.current?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "end",
+                    });
+                  }}
                   placeholder="Write your notes here"
                   value={notesText}
                   onChange={debouncedChangeHandler}
@@ -776,6 +783,7 @@ function App() {
           <Graphs baseline={calories} />
         </>
       )}
+      <div ref={bottomRef} />
     </div>
   );
 }

@@ -60,15 +60,12 @@ const fetchMeals = async (range?: DateRange) => {
     throw mealsError;
   }
 
-  console.log(notesData);
-
   const mapped: Meal[] =
     (mealsData as MealRow[] | null)?.map((m) => ({
       id: m.id,
       name: m.meal_name,
       calories: Number(m.meal_calories) || 0,
       time: m.time ? new Date(m.time) : null,
-      text: notesData?.[0].text,
     })) ?? [];
 
   const mappedNotes: Notes[] =
@@ -203,7 +200,9 @@ export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
         </div>
       )}
 
-      {isLoading && <span className="loading loading-ring loading-xl"></span>}
+      {isLoading && (
+        <span className="loading loading-ring loading-xl mt-4"></span>
+      )}
 
       {dataResponse && !isLoading && (
         <div
@@ -280,9 +279,9 @@ export const Graphs: React.FC<GraphsProps> = ({ baseline }) => {
         </div>
       )}
 
-      {isLoading && <div className="mt-2 text-sm opacity-70">Loading…</div>}
+      {isLoading && <div className="pt-4 text-sm opacity-70">Loading…</div>}
       {!isLoading && data.length === 0 && (
-        <div role="alert" className="alert alert-error alert-soft   m-4">
+        <div role="alert" className="alert alert-error alert-soft m-4">
           No meals in this range 😢 please pick a different time peroid
         </div>
       )}
