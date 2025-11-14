@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DayPicker } from "react-day-picker";
-import React, { useRef, useState, type SyntheticEvent } from "react";
+import React, { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { supabase } from "@/db";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -121,6 +121,11 @@ function App() {
 
   const [activeTab, setActiveTab] = useState("tab1");
 
+  const [notesText, setNotesText] = useState("");
+  const [savingNotes, setSavingNotes] = useState<"" | "saving" | "saved">("");
+
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   const queryClient = useQueryClient();
 
   // Query meals & config for the *selected* date
@@ -128,6 +133,12 @@ function App() {
     queryKey: ["meals-and-config", date.toDateString()],
     queryFn: () => fetchCaloriesForDay(date),
   });
+
+  useEffect(() => {
+    if (data?.notes?.text) {
+      setNotesText(data.notes.text);
+    }
+  }, [data]);
 
   const consumed = (data?.meals ?? []).reduce(
     (sum, m) => sum + (m.calories || 0),
@@ -170,6 +181,79 @@ function App() {
       closeAddModal();
     },
   });
+
+  const updateNotes = useMutation({
+    mutationFn: async (value: string) => {
+      const from = startOfDay(date).toISOString();
+      const to = endOfDay(date).toISOString();
+
+      // 1️⃣ Check if a rw exists for this day
+      const { data: existing, error } = await supabase
+        .from("notes")
+        .select("*")
+        .gte("time", from)
+        .lte("time", to)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (existing) {
+        if (!value.trim()) {
+          const { error: deleteError } = await supabase
+            .from("notes")
+            .delete()
+            .eq("id", existing.id);
+
+          if (deleteError) throw deleteError;
+          return null;
+        }
+
+        const { data, error: updateError } = await supabase
+          .from("notes")
+          .update({ text: value })
+          .eq("id", existing.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        return data;
+      }
+
+      if (!value.trim()) return null;
+
+      const { data, error: insertError } = await supabase
+        .from("notes")
+        .insert({
+          text: value,
+          time: from,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      return data;
+    },
+    onSuccess() {
+      setSavingNotes("saved"); // Auto-clear the “saved” message after 1–2 seconds
+      setTimeout(() => {
+        setSavingNotes("");
+      }, 1500);
+    },
+  });
+
+  const debouncedChangeHandler = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    const value = e.target.value;
+    setSavingNotes("saving");
+    setNotesText(value);
+
+    clearTimeout(timeoutRef.current);
+
+    timeoutRef.current = setTimeout(() => {
+      updateNotes.mutate(value);
+    }, 1000);
+  };
 
   const handleAddSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -291,6 +375,11 @@ function App() {
       id: data.configId,
       total_calories: val,
     });
+  };
+
+  const handleOnClear = () => {
+    updateNotes.mutate("");
+    setNotesText("");
   };
 
   return (
@@ -518,15 +607,36 @@ function App() {
               ))}
             </ul>
 
-            <div className="collapse collapse-arrow rounded-box bg-base-100 shadow-md ">
+            <div className="collapse collapse-arrow rounded-box bg-base-100 shadow-md">
               <input type="checkbox" />
               <div className="collapse-title font-semibold">Notes</div>
               <div className="collapse-content text-sm">
                 <textarea
                   placeholder="Write your notes here"
-                  defaultValue={data?.notes?.text}
+                  value={notesText}
+                  onChange={debouncedChangeHandler}
                   className="textarea h-40"
                 />
+                <div className="text-xs flex justify-between items-center">
+                  <div className="relative my-4">
+                    <span
+                      className={`${savingNotes === "saving" ? "visible" : "invisible"} absolute`}
+                    >
+                      Saving…
+                    </span>
+                    <span
+                      className={`${savingNotes === "saved" ? "visible" : "invisible"} absolute w-14 `}
+                    >
+                      Saved ✓
+                    </span>
+                  </div>
+                  <button
+                    className="btn btn-ghost text-xs h-6 w-10 absolute right-3 mt-4"
+                    onClick={handleOnClear}
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
             </div>
           </div>
