@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { Meals } from "./Meals";
+import "./Graph.css";
 
 const BMRCalories = 1500;
 
