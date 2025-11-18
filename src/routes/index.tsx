@@ -154,7 +154,13 @@ function App() {
   const handleChange = (d?: Date) => {
     if (!d) return;
 
-    d.setTime(date.getTime());
+    d.setHours(
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+      date.getMilliseconds()
+    );
+
     setDate(d);
     setIsOpen(false);
   };
