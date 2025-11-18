@@ -269,7 +269,7 @@ function App() {
     addMeal.mutate({
       meal_name,
       meal_calories,
-      time: new Date().toISOString(),
+      time: date.toISOString(),
     });
 
     form.reset();
