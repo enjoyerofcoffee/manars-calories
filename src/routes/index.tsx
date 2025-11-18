@@ -153,6 +153,8 @@ function App() {
 
   const handleChange = (d?: Date) => {
     if (!d) return;
+
+    d.setTime(date.getTime());
     setDate(d);
     setIsOpen(false);
   };
