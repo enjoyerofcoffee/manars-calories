@@ -138,6 +138,8 @@ function App() {
   useEffect(() => {
     if (data?.notes?.text) {
       setNotesText(data.notes.text);
+    } else {
+      setNotesText("");
     }
   }, [data]);
 
