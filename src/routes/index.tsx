@@ -156,13 +156,6 @@ function App() {
   const handleChange = (d?: Date) => {
     if (!d) return;
 
-    d.setHours(
-      date.getHours(),
-      date.getMinutes(),
-      date.getSeconds(),
-      date.getMilliseconds()
-    );
-
     setDate(d);
     setIsOpen(false);
   };
@@ -276,10 +269,12 @@ function App() {
 
     if (!meal_name || Number.isNaN(meal_calories) || meal_calories <= 0) return;
 
+    const updatedDate = updateDateWithLatestTime(date);
+
     addMeal.mutate({
       meal_name,
       meal_calories,
-      time: date.toISOString(),
+      time: updatedDate.toISOString(),
     });
 
     form.reset();
@@ -797,3 +792,14 @@ function App() {
     </div>
   );
 }
+
+const updateDateWithLatestTime = (date: Date) => {
+  const newTime = new Date();
+  date.setHours(
+    newTime.getHours(),
+    newTime.getMinutes(),
+    newTime.getSeconds(),
+    newTime.getMilliseconds()
+  );
+  return date;
+};
