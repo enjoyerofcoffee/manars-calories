@@ -6,6 +6,9 @@ import { supabase } from "@/db";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Graphs } from "@/components/Graphs";
 import type { Meal, MealRow, Notes } from "@/types";
+import { CalculatorButton } from "@/components/CalulcatorButton";
+import { NotesButton } from "@/components/NotesButton";
+import { AddMealDialog } from "@/components/AddMealDialog";
 
 export const Route = createFileRoute("/")({
   component: App,
@@ -494,46 +497,11 @@ function App() {
           </div>
 
           {/* Add meal dialog */}
-          <dialog ref={addDialogRef} className="modal">
-            <div className="modal-box">
-              <h3 className="text-2xl font-bold">Add meal</h3>
-
-              <form onSubmit={handleAddSubmit}>
-                <div className="modal-action flex flex-col gap-3">
-                  <input
-                    required
-                    name="mealname"
-                    type="text"
-                    placeholder="Meal name"
-                    className="input w-full"
-                  />
-                  <input
-                    required
-                    name="calories"
-                    min="1"
-                    type="number"
-                    placeholder="Calories"
-                    className="input w-full"
-                  />
-                  <div className="mt-2 flex justify-end gap-3">
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      onClick={() => addDialogRef.current?.close()}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="btn btn-primary"
-                      disabled={addMeal.isPending}
-                    >
-                      {addMeal.isPending ? "Adding..." : "Add"}
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </dialog>
+          <AddMealDialog
+            ref={addDialogRef}
+            onSubmit={handleAddSubmit}
+            isPending={addMeal.isPending}
+          />
 
           {/* Meals list */}
           {isLoading && (
