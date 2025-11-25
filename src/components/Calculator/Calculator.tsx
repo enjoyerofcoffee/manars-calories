@@ -84,7 +84,7 @@ export const Calculator: React.FC = () => {
     <div className="rounded-xl bg-base-100 p-4 shadow-sm">
       {/* Left: Display */}
       <div className="flex-1 flex">
-        <div className="flex-1 flex items-center justify-end rounded-md bg-slate-900 px-3 text-right text-2xl font-mono text-base-300 mb-2">
+        <div className="flex-1 flex items-center justify-end rounded-md bg-slate-900 px-3 text-right text-2xl font-mono text-base-300 mb-2 py-1">
           {display}
         </div>
       </div>
