@@ -19,6 +19,8 @@ export const AddMealDialog: React.FC<AddMealDialogProps> = ({
   const [openFoodInfo, setOpenFoodInfo] = useState(false);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
 
+  const keyboardVisible = keyboardOffset > 0; // simple boolean
+
   useEffect(() => {
     const viewport = window.visualViewport;
 
@@ -88,10 +90,11 @@ export const AddMealDialog: React.FC<AddMealDialogProps> = ({
           </div>
         </form>
         <div
-          className="absolute left-1/2 top-full w-full mt-2 rounded shadow"
-          style={{
-            transform: `translate(-50%, -${keyboardOffset}px)`,
-          }}
+          className={
+            keyboardVisible
+              ? "fixed left-1/2 bottom-0 w-full max-h-[45vh] -translate-x-1/2 rounded-t-2xl shadow overflow-y-auto"
+              : "absolute left-1/2 top-full w-full mt-2 -translate-x-1/2 rounded shadow"
+          }
         >
           {openCalculator && <Calculator />}
           {openFoodInfo && <FoodInfo />}
