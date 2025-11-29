@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { CalculatorButton } from "./CalulcatorButton";
-import { NotesButton } from "./NotesButton";
+import { FoodInfoButton } from "./FoodInfoButton";
+import { Calculator } from "./Calculator/Calculator";
+import { FoodInfo } from "./FoodInfo";
 
 type AddMealDialogProps = {
   onSubmit?: (e: React.SyntheticEvent<HTMLFormElement, Event>) => void;
@@ -14,6 +16,17 @@ export const AddMealDialog: React.FC<AddMealDialogProps> = ({
   ref,
 }) => {
   const [openCalculator, setOpenCalulcator] = useState(false);
+  const [openFoodInfo, setOpenFoodInfo] = useState(false);
+
+  const onClickCalulcator = () => {
+    setOpenCalulcator(!openCalculator);
+    setOpenFoodInfo(false);
+  };
+
+  const onClickFoodInfo = () => {
+    setOpenFoodInfo(!openFoodInfo);
+    setOpenCalulcator(false);
+  };
 
   return (
     <dialog ref={ref} className="modal">
@@ -38,10 +51,9 @@ export const AddMealDialog: React.FC<AddMealDialogProps> = ({
             />
             <div className="flex justify-between">
               <div className="flex space-x-2">
-                <CalculatorButton />
-                {/* <NotesButton /> */}
+                <CalculatorButton onClick={onClickCalulcator} />
+                <FoodInfoButton onClick={onClickFoodInfo} />
               </div>
-
               <div className="mt-2 flex justify-end gap-3">
                 <button
                   type="button"
@@ -57,6 +69,10 @@ export const AddMealDialog: React.FC<AddMealDialogProps> = ({
             </div>
           </div>
         </form>
+        <div className="absolute left-1/2 top-full w-full -translate-x-1/2 mt-2 rounded shadow">
+          {openCalculator && <Calculator />}
+          {openFoodInfo && <FoodInfo />}
+        </div>
       </div>
     </dialog>
   );

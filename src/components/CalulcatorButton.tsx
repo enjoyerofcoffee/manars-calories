@@ -1,21 +1,12 @@
-import { useState } from "react";
-import { Calculator } from "./Calculator/Calculator";
-
-export const CalculatorButton: React.FC = () => {
-  const [open, setOpen] = useState(false);
-
+type CalculatorButtonProps = {
+  onClick: () => void;
+};
+export const CalculatorButton: React.FC<CalculatorButtonProps> = ({
+  onClick,
+}) => {
   return (
-    <div>
-      {open && (
-        <div className="absolute left-1/2 top-full w-full -translate-x-1/2 mt-2 rounded shadow">
-          <Calculator />
-        </div>
-      )}
-      <button
-        type="button"
-        className="btn btn-square"
-        onClick={() => setOpen((o) => !o)}
-      >
+    <div className="space-x-2">
+      <button type="button" className="btn btn-square" onClick={onClick}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"

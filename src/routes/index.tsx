@@ -6,8 +6,6 @@ import { supabase } from "@/db";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Graphs } from "@/components/Graphs";
 import type { Meal, MealRow, Notes } from "@/types";
-import { CalculatorButton } from "@/components/CalulcatorButton";
-import { NotesButton } from "@/components/NotesButton";
 import { AddMealDialog } from "@/components/AddMealDialog";
 
 export const Route = createFileRoute("/")({

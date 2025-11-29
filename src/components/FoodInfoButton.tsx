@@ -1,6 +1,9 @@
-export const NotesButton: React.FC = () => {
+type FoodInfoButtonProps = {
+  onClick: () => void;
+};
+export const FoodInfoButton: React.FC<FoodInfoButtonProps> = ({ onClick }) => {
   return (
-    <button type="button" className="btn btn-square">
+    <button type="button" className="btn btn-square" onClick={onClick}>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="24"
