@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalculatorButton } from "./CalulcatorButton";
 import { FoodInfoButton } from "./FoodInfoButton";
 import { Calculator } from "./Calculator/Calculator";
@@ -17,6 +17,24 @@ export const AddMealDialog: React.FC<AddMealDialogProps> = ({
 }) => {
   const [openCalculator, setOpenCalulcator] = useState(false);
   const [openFoodInfo, setOpenFoodInfo] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+
+    if (!viewport) return;
+
+    const onResize = () => {
+      const keyboardHeight =
+        window.innerHeight - viewport.height - viewport.offsetTop;
+
+      // only apply if keyboard is visible
+      setKeyboardOffset(keyboardHeight > 0 ? keyboardHeight : 0);
+    };
+
+    viewport.addEventListener("resize", onResize);
+    return () => viewport.removeEventListener("resize", onResize);
+  }, []);
 
   const onClickCalulcator = () => {
     setOpenCalulcator(!openCalculator);
@@ -69,7 +87,12 @@ export const AddMealDialog: React.FC<AddMealDialogProps> = ({
             </div>
           </div>
         </form>
-        <div className="absolute left-1/2 top-full w-full -translate-x-1/2 mt-2 rounded shadow">
+        <div
+          className="absolute left-1/2 top-full w-full mt-2 rounded shadow"
+          style={{
+            transform: `translate(-50%, -${keyboardOffset}px)`,
+          }}
+        >
           {openCalculator && <Calculator />}
           {openFoodInfo && <FoodInfo />}
         </div>

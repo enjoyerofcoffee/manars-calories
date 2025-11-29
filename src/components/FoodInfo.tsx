@@ -148,7 +148,9 @@ export const FoodInfo: React.FC = () => {
           className="input w-full"
         />
         <div className="space-x-2 text-xs py-2 flex justify-end">
-          <button className="btn btn btn-xs">Reset</button>
+          <button className="btn btn btn-xs" type="reset">
+            Reset
+          </button>
           <button className="btn btn-xs btn-primary" type="submit">
             + Add button
           </button>

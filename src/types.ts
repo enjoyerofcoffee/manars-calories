@@ -23,3 +23,9 @@ export type NotesRow = {
   text: string;
   time: Date | null;
 };
+
+export type FoodInformation = {
+  id: string;
+  name: string;
+  notes: string;
+};
